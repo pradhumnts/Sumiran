@@ -38,10 +38,6 @@ export function ensureReminderVisibilityBinding() {
   });
 }
 
-export async function sendTestReminder() {
-  await send("Sumiran", "Test notification — if you see this, Sumiran can alert you.");
-}
-
 async function send(title, body) {
   if (typeof window === "undefined" || !("Notification" in window)) return;
   if (Notification.permission !== "granted") return;

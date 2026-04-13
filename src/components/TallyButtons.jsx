@@ -4,8 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-const MAIN = 1000;
-const PRESETS_ROW = [2000, 5000, 10000];
+const MAIN = 108;
+const PRESETS_ROW = [1000, 2000, 5000];
 
 export default function TallyButtons({ onAdd }) {
   const [custom, setCustom] = useState("");
@@ -27,7 +27,10 @@ export default function TallyButtons({ onAdd }) {
           className="h-[3.75rem] w-full rounded-full text-base font-bold tracking-tight shadow-lg shadow-foreground/15 transition-transform active:scale-[0.98]"
           onClick={() => onAdd(MAIN)}
         >
-          + {MAIN.toLocaleString()}
+          <span className="flex items-center justify-center gap-1.5 leading-tight">
+            <span className="text-lg">+{MAIN.toLocaleString()}</span>
+            <span className="text-xs font-semibold tabular-nums opacity-90">(1 Mala)</span>
+          </span>
         </Button>
 
         <div className="grid grid-cols-3 gap-2.5">

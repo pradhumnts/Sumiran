@@ -9,7 +9,6 @@ import {
   getNotificationSupport,
   getNotificationPermission,
   requestPermissionFromUserGesture,
-  sendTestReminder,
 } from "@/lib/notifications";
 
 const INTERVAL_OPTIONS = [1, 2, 3];
@@ -28,6 +27,14 @@ export default function Reminders({ settings, onChange }) {
 
   useEffect(() => {
     syncPerm();
+  }, [syncPerm]);
+
+  useEffect(() => {
+    function onVisibility() {
+      if (!document.hidden) syncPerm();
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [syncPerm]);
 
   function update(path, value) {
@@ -81,55 +88,37 @@ export default function Reminders({ settings, onChange }) {
         Reminders
       </h2>
 
-      <div className="rounded-[1.75rem] border border-border/60 bg-card p-4 shadow-[0_16px_40px_-28px_rgba(30,20,15,0.14)]">
-        {support === "unsupported" ? (
+      {support === "unsupported" && (
+        <div className="rounded-[1.75rem] border border-border/60 bg-card p-4 shadow-[0_16px_40px_-28px_rgba(30,20,15,0.14)]">
           <p className="text-sm font-medium text-muted-foreground">
             This browser does not support notifications. Try Safari or Chrome on a recent iPhone.
           </p>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-bold">Browser notifications</p>
-                <p className="text-xs font-medium text-muted-foreground">
-                  {perm === "granted" && "Allowed — reminders can show."}
-                  {perm === "denied" &&
-                    "Blocked — enable in system Settings → Sumiran / Safari → Notifications."}
-                  {perm === "default" &&
-                    "Tap below to allow (required on iPhone before any reminder can appear)."}
-                </p>
-              </div>
-              <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
-                {perm === "default" && (
-                  <Button
-                    type="button"
-                    className="h-10 rounded-full px-4 font-bold"
-                    onClick={handleAllowNotifications}
-                  >
-                    Allow notifications
-                  </Button>
-                )}
-                {perm === "granted" && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-10 rounded-full border-2 px-4 font-bold"
-                    onClick={() => void sendTestReminder()}
-                  >
-                    Send test alert
-                  </Button>
-                )}
-              </div>
+        </div>
+      )}
+
+      {support === "supported" && perm !== "granted" && (
+        <div className="rounded-[1.75rem] border border-border/60 bg-card p-4 shadow-[0_16px_40px_-28px_rgba(30,20,15,0.14)]">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-bold">Browser notifications</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                {perm === "denied" &&
+                  "Blocked — enable in system Settings → Sumiran / Safari → Notifications."}
+                {perm === "default" && "Tap below to allow notifications."}
+              </p>
             </div>
-            <p className="text-[11px] leading-relaxed text-muted-foreground">
-              On iPhone, add Sumiran to the Home Screen, open it, then tap{" "}
-              <span className="font-semibold text-foreground">Allow notifications</span>. Alerts
-              only fire reliably while the app is open or briefly in the background; iOS limits
-              background timers.
-            </p>
+            {perm === "default" && (
+              <Button
+                type="button"
+                className="h-10 shrink-0 rounded-full px-4 font-bold"
+                onClick={handleAllowNotifications}
+              >
+                Allow notifications
+              </Button>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="space-y-0 divide-y divide-border/60 rounded-[1.75rem] border border-border/60 bg-card p-1 shadow-[0_16px_40px_-28px_rgba(30,20,15,0.14)]">
         <div className="flex items-start justify-between gap-3 px-4 py-4">
@@ -140,7 +129,7 @@ export default function Reminders({ settings, onChange }) {
             <div className="min-w-0 space-y-1">
               <Label className="text-[15px] font-bold leading-tight">Hourly check-in</Label>
               <p className="text-xs font-medium leading-relaxed text-muted-foreground">
-                Repeats while this screen is open (or when you return — timers pause in background).
+                Periodic reminder while you use Sumiran.
               </p>
               {settings.hourly.enabled && (
                 <div className="space-y-2 pt-2">
@@ -201,8 +190,7 @@ export default function Reminders({ settings, onChange }) {
             <div className="min-w-0 space-y-1">
               <Label className="text-[15px] font-bold leading-tight">Evening check-in</Label>
               <p className="text-xs font-medium leading-relaxed text-muted-foreground">
-                8 PM local time if you&apos;re below goal (must have opened the app earlier that day
-                to schedule).
+                8 PM local if you&apos;re below goal.
               </p>
             </div>
           </div>

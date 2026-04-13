@@ -35,12 +35,20 @@ export default function CounterDisplay({ count, goal, allTimeTotal, onGoalSave }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <div className="relative overflow-hidden rounded-[1.75rem] border border-border/60 bg-card p-7 shadow-[0_20px_50px_-24px_rgba(30,20,15,0.18)]">
+      <div className="relative isolate rounded-[1.75rem] border border-border/60 bg-card p-7 shadow-[0_20px_50px_-24px_rgba(30,20,15,0.18)]">
+        {/*
+          Safari: filter:blur() draws outside overflow:hidden + border-radius. Use a CSS-only
+          radial gradient (no filter) so nothing paints past the rounded rect.
+        */}
         <div
-          className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-brand/12 blur-2xl"
+          className="pointer-events-none absolute inset-0 rounded-[1.75rem]"
+          style={{
+            background:
+              "radial-gradient(ellipse 110% 85% at 100% 0%, color-mix(in oklch, var(--color-brand) 26%, transparent) 0%, color-mix(in oklch, var(--color-brand) 8%, transparent) 44%, transparent 64%)",
+          }}
           aria-hidden
         />
-        <div className="relative flex flex-col items-center gap-5">
+        <div className="relative z-10 flex flex-col items-center gap-5">
           <p className="text-[clamp(3rem,14vw,4.25rem)] font-black tabular-nums leading-none tracking-tighter text-foreground">
             {count.toLocaleString()}
           </p>
