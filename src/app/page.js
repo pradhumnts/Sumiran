@@ -17,7 +17,7 @@ import {
   getReminderSettings,
   setReminderSettings,
 } from "@/lib/storage";
-import { requestPermission, initReminders } from "@/lib/notifications";
+import { initReminders, ensureReminderVisibilityBinding } from "@/lib/notifications";
 
 export default function Home() {
   const [count, setCount] = useState(0);
@@ -43,7 +43,7 @@ export default function Home() {
 
   useEffect(() => {
     refreshAll();
-    requestPermission();
+    ensureReminderVisibilityBinding();
     setMounted(true);
   }, [refreshAll]);
 

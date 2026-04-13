@@ -134,13 +134,20 @@ export function getLast7Days() {
 // --- Reminder settings ---
 
 const DEFAULT_REMINDERS = {
-  hourly: { enabled: false, interval: 1 },
+  hourly: { enabled: false, interval: 1, testEverySec: 30 },
   evening: { enabled: false },
   lateNight: { enabled: false },
 };
 
 export function getReminderSettings() {
-  return read(KEYS.REMINDERS, DEFAULT_REMINDERS);
+  const raw = read(KEYS.REMINDERS, DEFAULT_REMINDERS);
+  return {
+    ...DEFAULT_REMINDERS,
+    ...raw,
+    hourly: { ...DEFAULT_REMINDERS.hourly, ...raw.hourly },
+    evening: { ...DEFAULT_REMINDERS.evening, ...raw.evening },
+    lateNight: { ...DEFAULT_REMINDERS.lateNight, ...raw.lateNight },
+  };
 }
 
 export function setReminderSettings(settings) {

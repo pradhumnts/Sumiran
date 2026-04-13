@@ -1,20 +1,75 @@
-import { getTodayCount, getDailyGoal } from "./storage";
+import { getTodayCount, getDailyGoal, getReminderSettings } from "./storage";
 
 let hourlyTimer = null;
 let eveningTimer = null;
 let lateNightTimer = null;
+let visibilityBound = false;
 
-export function requestPermission() {
-  if (typeof window === "undefined" || !("Notification" in window)) return;
-  if (Notification.permission === "default") {
-    Notification.requestPermission();
+export function getNotificationSupport() {
+  if (typeof window === "undefined") return "unsupported";
+  if (!("Notification" in window)) return "unsupported";
+  return "supported";
+}
+
+export function getNotificationPermission() {
+  if (getNotificationSupport() === "unsupported") return "unsupported";
+  return Notification.permission;
+}
+
+/** Must run from a tap / user gesture (required on iOS Safari). */
+export async function requestPermissionFromUserGesture() {
+  if (getNotificationSupport() === "unsupported") return "unsupported";
+  if (Notification.permission === "granted") return "granted";
+  if (Notification.permission === "denied") return "denied";
+  try {
+    return await Notification.requestPermission();
+  } catch {
+    return "denied";
   }
 }
 
-function send(title, body) {
+/** Re-schedule when the user returns to the tab (timers are frozen in background on mobile). */
+export function ensureReminderVisibilityBinding() {
+  if (typeof document === "undefined" || visibilityBound) return;
+  visibilityBound = true;
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) return;
+    initReminders(getReminderSettings());
+  });
+}
+
+export async function sendTestReminder() {
+  await send("Sumiran", "Test notification — if you see this, Sumiran can alert you.");
+}
+
+async function send(title, body) {
   if (typeof window === "undefined" || !("Notification" in window)) return;
   if (Notification.permission !== "granted") return;
-  new Notification(title, { body, icon: "/logo/icon-192.png" });
+
+  const opts = {
+    body,
+    icon: "/logo/icon-192.png",
+    badge: "/logo/icon-192.png",
+    tag: "sumiran-reminder",
+    vibrate: [60, 40, 60],
+  };
+
+  try {
+    if ("serviceWorker" in navigator) {
+      const reg =
+        (await navigator.serviceWorker.getRegistration()) ||
+        (await navigator.serviceWorker.register("/sw.js", { scope: "/" }));
+      await reg.showNotification(title, opts);
+      return;
+    }
+  } catch {
+    /* fall through */
+  }
+  try {
+    new Notification(title, opts);
+  } catch {
+    /* ignore */
+  }
 }
 
 function clearAll() {
@@ -40,20 +95,28 @@ function msUntilHour(hour) {
   return target - now;
 }
 
+function hourlyIntervalMs(settings) {
+  const sec = settings.hourly?.testEverySec;
+  if (sec === 30 || sec === 60) return sec * 1000;
+  return (settings.hourly?.interval || 1) * 60 * 60 * 1000;
+}
+
 export function initReminders(settings) {
   clearAll();
   if (!settings) return;
 
-  // Hourly reminder
   if (settings.hourly?.enabled) {
-    const ms = (settings.hourly.interval || 1) * 60 * 60 * 1000;
-    hourlyTimer = setInterval(() => {
-      const count = getTodayCount();
-      send("Sumiran — Time to log", `You've done ${count.toLocaleString()} so far today. Keep going! 🙏`);
-    }, ms);
+    const ms = hourlyIntervalMs(settings);
+    if (ms > 0) {
+      hourlyTimer = setInterval(() => {
+        void send(
+          "Sumiran — Time to log",
+          `You've done ${getTodayCount().toLocaleString()} so far today. Keep going!`
+        );
+      }, ms);
+    }
   }
 
-  // Evening check-in at 8 PM
   if (settings.evening?.enabled) {
     const ms = msUntilHour(20);
     if (ms > 0) {
@@ -62,16 +125,15 @@ export function initReminders(settings) {
         const goal = getDailyGoal();
         if (count < goal) {
           const remaining = goal - count;
-          send(
+          void send(
             "Sumiran — Evening Check-in",
-            `You're at ${count.toLocaleString()} today. ${remaining.toLocaleString()} more to reach your goal. 🙏`
+            `You're at ${count.toLocaleString()} today. ${remaining.toLocaleString()} more to reach your goal.`
           );
         }
       }, ms);
     }
   }
 
-  // Late night push at 10 PM (only if below 50%)
   if (settings.lateNight?.enabled) {
     const ms = msUntilHour(22);
     if (ms > 0) {
@@ -79,9 +141,9 @@ export function initReminders(settings) {
         const count = getTodayCount();
         const goal = getDailyGoal();
         if (count < goal * 0.5) {
-          send(
+          void send(
             "Sumiran — Gentle Reminder",
-            `You're at ${count.toLocaleString()} — still time to sit for a session before the day ends. 🙏`
+            `You're at ${count.toLocaleString()} — still time to sit for a session before the day ends.`
           );
         }
       }, ms);

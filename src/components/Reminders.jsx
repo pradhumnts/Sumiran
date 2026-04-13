@@ -1,12 +1,35 @@
 "use client";
 
+import { useState, useEffect, useCallback } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Bell, Moon, Clock } from "lucide-react";
+import {
+  getNotificationSupport,
+  getNotificationPermission,
+  requestPermissionFromUserGesture,
+  sendTestReminder,
+} from "@/lib/notifications";
 
 const INTERVAL_OPTIONS = [1, 2, 3];
+const TEST_SEC_OPTIONS = [
+  { sec: null, label: "Off" },
+  { sec: 30, label: "30s" },
+  { sec: 60, label: "1m" },
+];
 
 export default function Reminders({ settings, onChange }) {
+  const [perm, setPerm] = useState("default");
+
+  const syncPerm = useCallback(() => {
+    setPerm(getNotificationPermission());
+  }, []);
+
+  useEffect(() => {
+    syncPerm();
+  }, [syncPerm]);
+
   function update(path, value) {
     const next = structuredClone(settings);
     const keys = path.split(".");
@@ -16,6 +39,39 @@ export default function Reminders({ settings, onChange }) {
     onChange(next);
   }
 
+  function patchHourly(partial) {
+    const next = structuredClone(settings);
+    next.hourly = { ...next.hourly, ...partial };
+    onChange(next);
+  }
+
+  async function ensurePermissionWhenEnabling() {
+    const p = await requestPermissionFromUserGesture();
+    setPerm(p);
+    return p === "granted";
+  }
+
+  async function handleAllowNotifications() {
+    const p = await requestPermissionFromUserGesture();
+    setPerm(p);
+  }
+
+  async function handleHourlyToggle(v) {
+    if (v) await ensurePermissionWhenEnabling();
+    update("hourly.enabled", v);
+  }
+
+  async function handleEveningToggle(v) {
+    if (v) await ensurePermissionWhenEnabling();
+    update("evening.enabled", v);
+  }
+
+  async function handleLateToggle(v) {
+    if (v) await ensurePermissionWhenEnabling();
+    update("lateNight.enabled", v);
+  }
+
+  const support = typeof window !== "undefined" ? getNotificationSupport() : "unsupported";
   const switchClass =
     "data-checked:bg-brand data-checked:border-brand/50 shrink-0 data-unchecked:border-border/80";
 
@@ -24,6 +80,57 @@ export default function Reminders({ settings, onChange }) {
       <h2 className="px-0.5 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
         Reminders
       </h2>
+
+      <div className="rounded-[1.75rem] border border-border/60 bg-card p-4 shadow-[0_16px_40px_-28px_rgba(30,20,15,0.14)]">
+        {support === "unsupported" ? (
+          <p className="text-sm font-medium text-muted-foreground">
+            This browser does not support notifications. Try Safari or Chrome on a recent iPhone.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-bold">Browser notifications</p>
+                <p className="text-xs font-medium text-muted-foreground">
+                  {perm === "granted" && "Allowed — reminders can show."}
+                  {perm === "denied" &&
+                    "Blocked — enable in system Settings → Sumiran / Safari → Notifications."}
+                  {perm === "default" &&
+                    "Tap below to allow (required on iPhone before any reminder can appear)."}
+                </p>
+              </div>
+              <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+                {perm === "default" && (
+                  <Button
+                    type="button"
+                    className="h-10 rounded-full px-4 font-bold"
+                    onClick={handleAllowNotifications}
+                  >
+                    Allow notifications
+                  </Button>
+                )}
+                {perm === "granted" && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-10 rounded-full border-2 px-4 font-bold"
+                    onClick={() => void sendTestReminder()}
+                  >
+                    Send test alert
+                  </Button>
+                )}
+              </div>
+            </div>
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              On iPhone, add Sumiran to the Home Screen, open it, then tap{" "}
+              <span className="font-semibold text-foreground">Allow notifications</span>. Alerts
+              only fire reliably while the app is open or briefly in the background; iOS limits
+              background timers.
+            </p>
+          </div>
+        )}
+      </div>
+
       <div className="space-y-0 divide-y divide-border/60 rounded-[1.75rem] border border-border/60 bg-card p-1 shadow-[0_16px_40px_-28px_rgba(30,20,15,0.14)]">
         <div className="flex items-start justify-between gap-3 px-4 py-4">
           <div className="flex min-w-0 gap-3">
@@ -33,24 +140,48 @@ export default function Reminders({ settings, onChange }) {
             <div className="min-w-0 space-y-1">
               <Label className="text-[15px] font-bold leading-tight">Hourly check-in</Label>
               <p className="text-xs font-medium leading-relaxed text-muted-foreground">
-                Nudge while this tab is open
+                Repeats while this screen is open (or when you return — timers pause in background).
               </p>
               {settings.hourly.enabled && (
-                <div className="flex flex-wrap gap-2 pt-2">
-                  {INTERVAL_OPTIONS.map((h) => (
-                    <button
-                      key={h}
-                      type="button"
-                      onClick={() => update("hourly.interval", h)}
-                      className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
-                        settings.hourly.interval === h
-                          ? "bg-foreground text-primary-foreground shadow-md"
-                          : "border-2 border-foreground/10 bg-muted/30 text-muted-foreground hover:border-foreground/20"
-                      }`}
-                    >
-                      {h}h
-                    </button>
-                  ))}
+                <div className="space-y-2 pt-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                    Every (hours)
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {INTERVAL_OPTIONS.map((h) => (
+                      <button
+                        key={h}
+                        type="button"
+                        onClick={() => patchHourly({ interval: h, testEverySec: null })}
+                        className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
+                          settings.hourly.interval === h && !settings.hourly.testEverySec
+                            ? "bg-foreground text-primary-foreground shadow-md"
+                            : "border-2 border-foreground/10 bg-muted/30 text-muted-foreground hover:border-foreground/20"
+                        }`}
+                      >
+                        {h}h
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                    Test interval (debug)
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {TEST_SEC_OPTIONS.map(({ sec, label }) => (
+                      <button
+                        key={String(sec)}
+                        type="button"
+                        onClick={() => patchHourly({ testEverySec: sec })}
+                        className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
+                          (settings.hourly.testEverySec ?? null) === sec
+                            ? "bg-foreground text-primary-foreground shadow-md"
+                            : "border-2 border-foreground/10 bg-muted/30 text-muted-foreground hover:border-foreground/20"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -58,7 +189,7 @@ export default function Reminders({ settings, onChange }) {
           <Switch
             className={switchClass}
             checked={settings.hourly.enabled}
-            onCheckedChange={(v) => update("hourly.enabled", v)}
+            onCheckedChange={handleHourlyToggle}
           />
         </div>
 
@@ -70,14 +201,15 @@ export default function Reminders({ settings, onChange }) {
             <div className="min-w-0 space-y-1">
               <Label className="text-[15px] font-bold leading-tight">Evening check-in</Label>
               <p className="text-xs font-medium leading-relaxed text-muted-foreground">
-                8 PM if you&apos;re below goal
+                8 PM local time if you&apos;re below goal (must have opened the app earlier that day
+                to schedule).
               </p>
             </div>
           </div>
           <Switch
             className={switchClass}
             checked={settings.evening.enabled}
-            onCheckedChange={(v) => update("evening.enabled", v)}
+            onCheckedChange={handleEveningToggle}
           />
         </div>
 
@@ -89,14 +221,14 @@ export default function Reminders({ settings, onChange }) {
             <div className="min-w-0 space-y-1">
               <Label className="text-[15px] font-bold leading-tight">Late night push</Label>
               <p className="text-xs font-medium leading-relaxed text-muted-foreground">
-                10 PM if under half your goal
+                10 PM local if under half your goal.
               </p>
             </div>
           </div>
           <Switch
             className={switchClass}
             checked={settings.lateNight.enabled}
-            onCheckedChange={(v) => update("lateNight.enabled", v)}
+            onCheckedChange={handleLateToggle}
           />
         </div>
       </div>
