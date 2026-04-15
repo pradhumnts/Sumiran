@@ -1,4 +1,5 @@
 import { getTodayCount, getDailyGoal, getReminderSettings } from "./storage";
+import { shouldSkipClientHourlyTimer } from "./push-client";
 
 let hourlyTimer = null;
 let eveningTimer = null;
@@ -101,7 +102,7 @@ export function initReminders(settings) {
   clearAll();
   if (!settings) return;
 
-  if (settings.hourly?.enabled) {
+  if (settings.hourly?.enabled && !shouldSkipClientHourlyTimer(settings)) {
     const ms = hourlyIntervalMs(settings);
     if (ms > 0) {
       hourlyTimer = setInterval(() => {

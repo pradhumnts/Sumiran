@@ -17,6 +17,11 @@ function getToday() {
   return getLocalDateKey(new Date());
 }
 
+/** Local calendar date key (YYYY-MM-DD) for "today" — safe after mount in the browser. */
+export function getTodayDateKey() {
+  return getToday();
+}
+
 function read(key, fallback) {
   if (typeof window === "undefined") return fallback;
   try {

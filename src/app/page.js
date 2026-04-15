@@ -18,6 +18,7 @@ import {
   setReminderSettings,
 } from "@/lib/storage";
 import { initReminders, ensureReminderVisibilityBinding } from "@/lib/notifications";
+import { shouldSkipClientHourlyTimer, syncPushWithReminders } from "@/lib/push-client";
 
 export default function Home() {
   const [count, setCount] = useState(0);
@@ -50,6 +51,21 @@ export default function Home() {
   useEffect(() => {
     if (reminders) initReminders(reminders);
   }, [reminders]);
+
+  useEffect(() => {
+    if (!reminders) return;
+    let cancelled = false;
+    (async () => {
+      const beforeSkip = shouldSkipClientHourlyTimer(reminders);
+      await syncPushWithReminders(reminders);
+      if (cancelled) return;
+      const afterSkip = shouldSkipClientHourlyTimer(reminders);
+      if (beforeSkip !== afterSkip) initReminders(reminders);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [reminders, count, goal]);
 
   function handleAdd(n) {
     addToTodayCount(n);
