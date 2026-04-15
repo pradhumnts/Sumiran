@@ -124,9 +124,9 @@ export default function Reminders({ settings, onChange }) {
             <div className="min-w-0 space-y-1">
               <Label className="text-[15px] font-bold leading-tight">Hourly check-in</Label>
               <p className="text-xs font-medium leading-relaxed text-muted-foreground">
-                In the app while it&apos;s open, nudges use the interval below. When the app is
-                closed, timing follows your server cron (same spacing) plus your evening and late
-                night rules.
+                Gentle pings while you&apos;re using the app, on the schedule you pick below. If
+                Sumiran isn&apos;t open, you&apos;ll still get reminders on a similar rhythm, plus
+                your 8&nbsp;PM and 10&nbsp;PM check-ins when they apply.
               </p>
               {settings.hourly.enabled && (
                 <div className="space-y-2 pt-2">
