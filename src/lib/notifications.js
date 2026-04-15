@@ -93,8 +93,6 @@ function msUntilHour(hour) {
 }
 
 function hourlyIntervalMs(settings) {
-  const sec = settings.hourly?.testEverySec;
-  if (sec === 30 || sec === 60) return sec * 1000;
   return (settings.hourly?.interval || 1) * 60 * 60 * 1000;
 }
 

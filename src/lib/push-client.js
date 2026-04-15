@@ -38,7 +38,7 @@ export function getOrCreatePushClientId() {
 
 export function shouldSkipClientHourlyTimer(settings) {
   if (typeof window === "undefined") return false;
-  if (!settings?.hourly?.enabled || settings.hourly?.testEverySec) return false;
+  if (!settings?.hourly?.enabled) return false;
   try {
     return localStorage.getItem(SERVER_HOURLY_FLAG) === "1";
   } catch {
@@ -133,8 +133,7 @@ export async function syncPushWithReminders(settings) {
       snapshot,
     });
 
-    const serverHourly = !!(reminders.hourly?.enabled && !reminders.hourly?.testEverySec);
-    setServerHourlyFlag(serverHourly);
+    setServerHourlyFlag(!!reminders.hourly?.enabled);
   } catch {
     setServerHourlyFlag(false);
   }

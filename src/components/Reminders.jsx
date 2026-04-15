@@ -12,11 +12,6 @@ import {
 } from "@/lib/notifications";
 
 const INTERVAL_OPTIONS = [1, 2, 3];
-const TEST_SEC_OPTIONS = [
-  { sec: null, label: "Off" },
-  { sec: 30, label: "30s" },
-  { sec: 60, label: "1m" },
-];
 
 export default function Reminders({ settings, onChange }) {
   const [perm, setPerm] = useState("default");
@@ -129,7 +124,9 @@ export default function Reminders({ settings, onChange }) {
             <div className="min-w-0 space-y-1">
               <Label className="text-[15px] font-bold leading-tight">Hourly check-in</Label>
               <p className="text-xs font-medium leading-relaxed text-muted-foreground">
-                Periodic reminder while you use Sumiran.
+                In the app while it&apos;s open, nudges use the interval below. When the app is
+                closed, timing follows your server cron (same spacing) plus your evening and late
+                night rules.
               </p>
               {settings.hourly.enabled && (
                 <div className="space-y-2 pt-2">
@@ -141,33 +138,14 @@ export default function Reminders({ settings, onChange }) {
                       <button
                         key={h}
                         type="button"
-                        onClick={() => patchHourly({ interval: h, testEverySec: null })}
+                        onClick={() => patchHourly({ interval: h })}
                         className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
-                          settings.hourly.interval === h && !settings.hourly.testEverySec
+                          settings.hourly.interval === h
                             ? "bg-foreground text-primary-foreground shadow-md"
                             : "border-2 border-foreground/10 bg-muted/30 text-muted-foreground hover:border-foreground/20"
                         }`}
                       >
                         {h}h
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                    Test interval (debug)
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {TEST_SEC_OPTIONS.map(({ sec, label }) => (
-                      <button
-                        key={String(sec)}
-                        type="button"
-                        onClick={() => patchHourly({ testEverySec: sec })}
-                        className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
-                          (settings.hourly.testEverySec ?? null) === sec
-                            ? "bg-foreground text-primary-foreground shadow-md"
-                            : "border-2 border-foreground/10 bg-muted/30 text-muted-foreground hover:border-foreground/20"
-                        }`}
-                      >
-                        {label}
                       </button>
                     ))}
                   </div>

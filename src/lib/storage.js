@@ -139,22 +139,36 @@ export function getLast7Days() {
 // --- Reminder settings ---
 
 const DEFAULT_REMINDERS = {
-  hourly: { enabled: false, interval: 1, testEverySec: 30 },
+  hourly: { enabled: false, interval: 1 },
   evening: { enabled: false },
   lateNight: { enabled: false },
 };
 
 export function getReminderSettings() {
   const raw = read(KEYS.REMINDERS, DEFAULT_REMINDERS);
+  const hourlyRaw = { ...DEFAULT_REMINDERS.hourly, ...raw.hourly };
+  const { testEverySec: _legacy, ...hourly } = hourlyRaw;
   return {
     ...DEFAULT_REMINDERS,
     ...raw,
-    hourly: { ...DEFAULT_REMINDERS.hourly, ...raw.hourly },
+    hourly: {
+      ...hourly,
+      interval: Math.max(1, Math.min(24, Number(hourly.interval) || 1)),
+    },
     evening: { ...DEFAULT_REMINDERS.evening, ...raw.evening },
     lateNight: { ...DEFAULT_REMINDERS.lateNight, ...raw.lateNight },
   };
 }
 
 export function setReminderSettings(settings) {
-  write(KEYS.REMINDERS, settings);
+  if (!settings) return;
+  const hourlyRaw = { ...DEFAULT_REMINDERS.hourly, ...settings.hourly };
+  const { testEverySec: _legacy, ...hourly } = hourlyRaw;
+  write(KEYS.REMINDERS, {
+    ...settings,
+    hourly: {
+      ...hourly,
+      interval: Math.max(1, Math.min(24, Number(hourly.interval) || 1)),
+    },
+  });
 }

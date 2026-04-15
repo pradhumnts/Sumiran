@@ -17,7 +17,7 @@ export function planPushSends(record, nowMs = Date.now(), options = {}) {
   /** @type {{ kind: string; title: string; body: string; tag: string }[]} */
   const sends = [];
 
-  if (prefs.hourly?.enabled && !prefs.hourly?.testEverySec) {
+  if (prefs.hourly?.enabled) {
     const intervalH = Math.max(1, Number(prefs.hourly.interval) || 1);
     const normalMinMs = intervalH * 60 * 60 * 1000 * 0.85;
     const minMs = fastTest ? Math.min(normalMinMs, 50_000) : normalMinMs;
