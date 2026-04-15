@@ -27,6 +27,7 @@ export async function POST(request) {
     return NextResponse.json({ error: "VAPID keys not configured" }, { status: 503 });
   }
 
+  const fastTest = new URL(request.url).searchParams.get("fastTest") === "1";
   const ids = await listPushClientIds(redis);
   let sent = 0;
   let removed = 0;
@@ -37,7 +38,7 @@ export async function POST(request) {
     const record = parsePushRecordRaw(raw);
     if (!record) continue;
 
-    const { sends, nextLast } = planPushSends(record);
+    const { sends, nextLast } = planPushSends(record, Date.now(), { fastTest });
     if (sends.length === 0) continue;
 
     const sub = record.subscription;
@@ -85,7 +86,14 @@ export async function POST(request) {
     }
   }
 
-  return NextResponse.json({ ok: true, subscribers: ids.length, sent, removed, errors });
+  return NextResponse.json({
+    ok: true,
+    subscribers: ids.length,
+    sent,
+    removed,
+    errors,
+    fastTest,
+  });
 }
 
 /** cron-job.org can use GET with query — discouraged; POST + header is preferred. */

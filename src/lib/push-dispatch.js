@@ -3,8 +3,10 @@ import { getLocalDateKeyForZone, getLocalHour } from "./push-timezone";
 /**
  * Decide which Web Push notifications to send for one stored subscriber row.
  * `last` is updated only when a corresponding notification is sent (caller persists).
+ * @param {{ fastTest?: boolean }} [options] — `fastTest`: shorten server hourly spacing (~50s) for cron integration tests (same auth as cron).
  */
-export function planPushSends(record, nowMs = Date.now()) {
+export function planPushSends(record, nowMs = Date.now(), options = {}) {
+  const fastTest = options.fastTest === true;
   const timeZone = record.timeZone || "UTC";
   const prefs = record.prefs || {};
   const snap = record.snapshot || { todayCount: 0, goal: 5000, todayKey: "" };
@@ -17,7 +19,8 @@ export function planPushSends(record, nowMs = Date.now()) {
 
   if (prefs.hourly?.enabled && !prefs.hourly?.testEverySec) {
     const intervalH = Math.max(1, Number(prefs.hourly.interval) || 1);
-    const minMs = intervalH * 60 * 60 * 1000 * 0.85;
+    const normalMinMs = intervalH * 60 * 60 * 1000 * 0.85;
+    const minMs = fastTest ? Math.min(normalMinMs, 50_000) : normalMinMs;
     const prev = last.hourlyAt;
     if (!prev || nowMs - prev >= minMs) {
       sends.push({
