@@ -1,30 +1,14 @@
 import { NextResponse } from "next/server";
 import webpush from "web-push";
+import { configureWebPushFromEnv, verifyCronRequest } from "@/lib/cron-push-shared";
 import { deletePushRecord, getPushRedis, listPushClientIds, pushDataKey } from "@/lib/redis-push";
 import { planPushSends } from "@/lib/push-dispatch";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-function verifyCron(request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  const auth = request.headers.get("authorization");
-  if (auth === `Bearer ${secret}`) return true;
-  return request.headers.get("x-cron-secret") === secret;
-}
-
-function configureWebPush() {
-  const publicKey = process.env.VAPID_PUBLIC_KEY || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
-  const subject = process.env.VAPID_SUBJECT || "mailto:sumiran@localhost";
-  if (!publicKey || !privateKey) return false;
-  webpush.setVapidDetails(subject, publicKey, privateKey);
-  return true;
-}
-
 export async function POST(request) {
-  if (!verifyCron(request)) {
+  if (!verifyCronRequest(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -33,7 +17,7 @@ export async function POST(request) {
     return NextResponse.json({ error: "Redis not configured" }, { status: 503 });
   }
 
-  if (!configureWebPush()) {
+  if (!configureWebPushFromEnv()) {
     return NextResponse.json({ error: "VAPID keys not configured" }, { status: 503 });
   }
 
