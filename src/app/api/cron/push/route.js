@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import webpush from "web-push";
 import { configureWebPushFromEnv, verifyCronRequest } from "@/lib/cron-push-shared";
-import { deletePushRecord, getPushRedis, listPushClientIds, pushDataKey } from "@/lib/redis-push";
+import {
+  deletePushRecord,
+  getPushRedis,
+  listPushClientIds,
+  parsePushRecordRaw,
+  pushDataKey,
+} from "@/lib/redis-push";
 import { planPushSends } from "@/lib/push-dispatch";
 
 export const runtime = "nodejs";
@@ -28,14 +34,8 @@ export async function POST(request) {
 
   for (const clientId of ids) {
     const raw = await redis.get(pushDataKey(clientId));
-    if (!raw || typeof raw !== "string") continue;
-
-    let record;
-    try {
-      record = JSON.parse(raw);
-    } catch {
-      continue;
-    }
+    const record = parsePushRecordRaw(raw);
+    if (!record) continue;
 
     const { sends, nextLast } = planPushSends(record);
     if (sends.length === 0) continue;

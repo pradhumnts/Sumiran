@@ -3,6 +3,26 @@ import { Redis } from "@upstash/redis";
 const CLIENTS_KEY = "sumiran:push:clients";
 export const pushDataKey = (clientId) => `sumiran:push:data:${clientId}`;
 
+/**
+ * Upstash `get` may return a JSON string or an already-parsed object.
+ * @returns {object|null}
+ */
+export function parsePushRecordRaw(raw) {
+  if (raw == null) return null;
+  if (typeof raw === "string") {
+    try {
+      const v = JSON.parse(raw);
+      return v && typeof v === "object" && !Array.isArray(v) ? v : null;
+    } catch {
+      return null;
+    }
+  }
+  if (typeof raw === "object" && !Array.isArray(raw) && raw.subscription != null) {
+    return raw;
+  }
+  return null;
+}
+
 export function getPushRedis() {
   const url =
     process.env.UPSTASH_REDIS_REST_URL ||

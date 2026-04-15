@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPushRedis, pushDataKey, savePushRecord } from "@/lib/redis-push";
+import { getPushRedis, parsePushRecordRaw, pushDataKey, savePushRecord } from "@/lib/redis-push";
 
 export const runtime = "nodejs";
 
@@ -41,14 +41,7 @@ export async function POST(request) {
   const snap = json.snapshot && typeof json.snapshot === "object" ? json.snapshot : {};
 
   const existingRaw = await redis.get(pushDataKey(clientId));
-  let existing = null;
-  if (existingRaw && typeof existingRaw === "string") {
-    try {
-      existing = JSON.parse(existingRaw);
-    } catch {
-      existing = null;
-    }
-  }
+  const existing = parsePushRecordRaw(existingRaw);
 
   const record = {
     subscription: json.subscription,
