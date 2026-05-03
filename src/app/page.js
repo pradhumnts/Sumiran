@@ -7,6 +7,7 @@ import TallyButtons from "@/components/TallyButtons";
 import WeeklyChart from "@/components/WeeklyChart";
 import EntryLog from "@/components/EntryLog";
 import Reminders from "@/components/Reminders";
+import TapCountMode from "@/components/TapCountMode";
 import {
   getTodayCount,
   addToTodayCount,
@@ -27,6 +28,7 @@ export default function Home() {
   const [chartData, setChartData] = useState([]);
   const [reminders, setReminders] = useState(null);
   const [mounted, setMounted] = useState(false);
+  const [tapModeOpen, setTapModeOpen] = useState(false);
 
   const refreshAll = useCallback(() => {
     setCount(getTodayCount());
@@ -72,6 +74,11 @@ export default function Home() {
     refreshCounts();
   }
 
+  function handleTapModeAdd() {
+    addToTodayCount(1);
+    refreshCounts();
+  }
+
   function handleGoalSave(newGoal) {
     setDailyGoal(newGoal);
     setGoal(newGoal);
@@ -93,7 +100,17 @@ export default function Home() {
 
   return (
     <div className="mx-auto w-full max-w-md space-y-7 px-4 py-8 pb-16 sm:space-y-8 sm:py-10">
-      <Header />
+      <TapCountMode
+        open={tapModeOpen}
+        onClose={() => {
+          setTapModeOpen(false);
+          refreshCounts();
+        }}
+        count={count}
+        goal={goal}
+        onTap={handleTapModeAdd}
+      />
+      <Header onOpenTapMode={() => setTapModeOpen(true)} />
       <CounterDisplay
         count={count}
         goal={goal}
