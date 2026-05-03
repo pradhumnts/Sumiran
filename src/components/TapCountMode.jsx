@@ -103,7 +103,7 @@ export default function TapCountMode({ open, onClose, count, goal, onTap }) {
         </div>
 
         <p className="pointer-events-none max-w-[16rem] text-center text-xs font-medium leading-relaxed text-muted-foreground">
-          Tap anywhere to add one. Press Esc or the button to exit.
+          Tap anywhere to add one.
         </p>
       </div>
     </div>

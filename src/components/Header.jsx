@@ -41,7 +41,7 @@ export default function Header({ onOpenTapMode }) {
               aria-hidden
             />
             <Sparkles
-              className="relative size-[1.375rem] text-muted-foreground/55 transition-[color,transform] group-hover:text-foreground/65 group-hover:scale-[1.04] group-active:scale-[0.98]"
+              className="relative size-[1.375rem] text-muted-foreground transition-[color,transform] group-hover:text-foreground/65 group-hover:scale-[1.04] group-active:scale-[0.98]"
               strokeWidth={1.15}
               aria-hidden
             />
