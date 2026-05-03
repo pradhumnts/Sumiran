@@ -74,11 +74,6 @@ export default function Home() {
     refreshCounts();
   }
 
-  function handleTapModeAdd() {
-    addToTodayCount(1);
-    refreshCounts();
-  }
-
   function handleGoalSave(newGoal) {
     setDailyGoal(newGoal);
     setGoal(newGoal);
@@ -108,7 +103,7 @@ export default function Home() {
         }}
         count={count}
         goal={goal}
-        onTap={handleTapModeAdd}
+        onTick={refreshCounts}
       />
       <Header onOpenTapMode={() => setTapModeOpen(true)} />
       <CounterDisplay

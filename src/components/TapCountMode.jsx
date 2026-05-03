@@ -1,30 +1,42 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { addToTodayCountWithoutLog, appendLogEntryOnly } from "@/lib/storage";
 
 /**
- * Full-screen minimal mode: each tap (except the close control) adds +1 to today via `onTap`.
+ * Full-screen tap mode: +1 updates today's total without logging each tap;
+ * closing writes a single entry log line for the session total.
  */
-export default function TapCountMode({ open, onClose, count, goal, onTap }) {
+export default function TapCountMode({ open, onClose, count, goal, onTick }) {
   const lastAt = useRef(0);
+  const sessionTicksRef = useRef(0);
 
   useEffect(() => {
     if (!open) return;
+    sessionTicksRef.current = 0;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = "";
     };
   }, [open]);
 
+  const closeAndFlush = useCallback(() => {
+    const n = sessionTicksRef.current;
+    sessionTicksRef.current = 0;
+    if (n > 0) appendLogEntryOnly(n);
+    onClose();
+  }, [onClose]);
+
   useEffect(() => {
     if (!open) return;
     function onKey(e) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") closeAndFlush();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, closeAndFlush]);
 
   const handlePointerDown = useCallback(
     (e) => {
@@ -41,26 +53,29 @@ export default function TapCountMode({ open, onClose, count, goal, onTap }) {
           /* ignore */
         }
       }
-      onTap();
+      addToTodayCountWithoutLog(1);
+      sessionTicksRef.current += 1;
+      onTick?.();
     },
-    [onTap]
+    [onTick]
   );
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
   const pct = goal > 0 ? Math.min((count / goal) * 100, 100) : 0;
   const metGoal = count >= goal;
 
-  return (
+  const overlay = (
     <div
-      className="fixed inset-0 z-[100] isolate flex touch-manipulation flex-col bg-background select-none"
+      className="fixed inset-0 z-[200] isolate flex h-[100dvh] min-h-[100dvh] w-screen max-w-none touch-manipulation flex-col overflow-hidden overscroll-none bg-background select-none"
+      style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       role="dialog"
       aria-modal="true"
       aria-label="Tap to count"
       onPointerDown={handlePointerDown}
     >
       <div
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute inset-0 min-h-full"
         style={{
           background:
             "radial-gradient(ellipse 110% 90% at 50% 15%, color-mix(in oklch, var(--color-brand) 22%, transparent) 0%, color-mix(in oklch, var(--color-brand) 7%, transparent) 42%, transparent 62%)",
@@ -68,12 +83,12 @@ export default function TapCountMode({ open, onClose, count, goal, onTap }) {
         aria-hidden
       />
 
-      <div className="relative z-20 flex justify-end px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2">
+      <div className="relative z-20 flex shrink-0 justify-end px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2">
         <button
           type="button"
           data-tap-ui
           onPointerDown={(e) => e.stopPropagation()}
-          onClick={onClose}
+          onClick={closeAndFlush}
           className="flex size-11 items-center justify-center rounded-full border border-border/70 bg-card/90 text-foreground shadow-md ring-1 ring-foreground/[0.06] backdrop-blur-sm transition-colors hover:bg-muted/80"
           aria-label="Close tap count mode"
         >
@@ -81,7 +96,7 @@ export default function TapCountMode({ open, onClose, count, goal, onTap }) {
         </button>
       </div>
 
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center gap-5 px-6 pb-[max(2rem,env(safe-area-inset-bottom))]">
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center gap-5 px-6 pb-6">
         <p className="pointer-events-none text-[clamp(3.25rem,18vw,5.5rem)] font-black tabular-nums leading-none tracking-tighter text-foreground">
           {count.toLocaleString()}
         </p>
@@ -108,4 +123,6 @@ export default function TapCountMode({ open, onClose, count, goal, onTap }) {
       </div>
     </div>
   );
+
+  return createPortal(overlay, document.body);
 }

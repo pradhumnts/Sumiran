@@ -99,6 +99,21 @@ export function addToTodayCount(amount) {
   return counts[today];
 }
 
+/** Adds to today's total without writing the entry log (used for tap-count ticks). */
+export function addToTodayCountWithoutLog(amount) {
+  if (amount <= 0) return getTodayCount();
+  const counts = getDailyCounts();
+  const today = getToday();
+  counts[today] = (counts[today] || 0) + amount;
+  write(KEYS.DAILY_COUNTS, counts);
+  return counts[today];
+}
+
+/** One log line only; daily total must already include this amount. */
+export function appendLogEntryOnly(amount) {
+  appendEntry(amount);
+}
+
 export function getAllTimeTotal() {
   const counts = getDailyCounts();
   return Object.values(counts).reduce((sum, n) => sum + n, 0);
